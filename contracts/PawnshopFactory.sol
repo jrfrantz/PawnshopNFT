@@ -27,7 +27,7 @@ contract PawnshopFactory is Ownable, Pausable {
     // (4) time duration
     // (5) bidder's accepted interest rate in bips. 50 = 0.5% annual interest
     function offer(
-        address _token, uint256 _tokenId,
+        address _token, uint256 _id,
         uint256 _askPrice,
         uint256 _pawnDuration, 
         uint256 _annualInterestRateBips
@@ -51,9 +51,9 @@ contract PawnshopFactory is Ownable, Pausable {
             )
         );
 
-        emit PawnAsk(_token, _tokenId, _askPrice, pawn, pawnCount);
+        emit PawnAsk(_token, _id, _askPrice, pawn, pawnCount);
 
-        IERC721(_token).safeTransferFrom(msg.sender, vault, _id);
+        IERC721(_token).safeTransferFrom(msg.sender, pawn, _id);
         
         pawns[pawnCount] = pawn;
         pawnCount++;

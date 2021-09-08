@@ -1,11 +1,11 @@
 //SPDX-License-Identifier: Unlicense
 pragma solidity ^0.8.0;
 
-import "@openzeppelin/contracts/token/ERC721/utils/ERC721Holder.sol";
-
+import "@openzeppelin/contracts-upgradeable/token/ERC721/utils/ERC721HolderUpgradeable.sol";
+import "@openzeppelin/contracts/interfaces/IERC721.sol";
 
 // todo: pragmas and pull in sendwethoreth
-contract PawnVault is ERC721Holder {
+contract PawnVault is ERC721HolderUpgradeable {
 
     address public owner;
     address public lender;
@@ -26,7 +26,7 @@ contract PawnVault is ERC721Holder {
 
     function initialize(
         address _owner, 
-        address _token, uint256 _tokenId,
+        address _token, uint256 _id,
         uint256 _askPrice,
         uint256 _pawnDuration, uint256 _annualInterestRateBips) external initializer {
         
@@ -39,9 +39,9 @@ contract PawnVault is ERC721Holder {
         pawnDuration = _pawnDuration;
         annualInterestRateBips = _annualInterestRateBips;
         
-        starttime = block.timestamp;
+        starttime = block.timestamp; //solhint-disable-line not-rely-on-time
         
-        state = inactive;
+        state = State.inactive;
     }
 
     /**
@@ -49,17 +49,17 @@ contract PawnVault is ERC721Holder {
      */ 
     function cancel() external {
         require(msg.sender == owner, "cancel: not owner");
-        require(state == inactive, "cancel: too late");
+        require(state == State.inactive, "cancel: too late");
 
         IERC721(token).transferFrom(address(this), msg.sender, id);
 
-        state = cancelled;
+        state = State.cancelled;
     }
     /**
     * 
     */
     function redeem() external payable {
-        require (state == pawned, "redeem: nothing to redeem");
+        require (state == State.pawned, "redeem: nothing to redeem");
         require (msg.sender == owner, "redeem: not depositor");
 
 
@@ -68,15 +68,15 @@ contract PawnVault is ERC721Holder {
         // turn that into seconds 
         uint256 feePerSecond = annualFee / 31536000;
         // get time duration that interest is owed
-        uint256 timeBorrowed = block.timestamp - starttime;
+        uint256 timeBorrowed = block.timestamp - starttime; //solhint-disable-line not-rely-on-time
 
 
         uint256 interestOwed = feePerSecond * timeBorrowed;
-        require(msg.value > askPrice + interestOwed);
+        require(msg.value > askPrice + interestOwed, "haven't paid enough");
 
         // TODO: sendEthorWeth from partybid in the amount of either address(this) or just the amt calculated
 
-        state = withdrawn;
+        state = State.withdrawn;
     }
 
 
@@ -87,26 +87,26 @@ contract PawnVault is ERC721Holder {
         require(msg.value == askPrice, "stake: pay list price");
 
         lender = msg.sender;
-        starttime = block.timestamp;
+        starttime = block.timestamp; //solhint-disable-line not-rely-on-time
         
-        state = pawned;
+        state = State.pawned;
     }
 
 
     function liquidate() external {
-        require(state == pawned, "liquidate: item not pawned");
-        require(msg.sender == lender, "only lender can liquidate");
-        require(block.timestamp >= starttime + pawnDuration);
+        require(state == State.pawned, "liquidate: item not pawned");
+        require(msg.sender == lender, "liquidate: only lender");
+        //solhint-disable-next-line not-rely-on-time
+        require(block.timestamp >= starttime + pawnDuration, "liquidate: too soon"); 
 
         // TODO allow partial payback logic
-        state = liquidated;
+        state = State.liquidated;
     }
-
 }
 
 /**
  * HELPER FUNCTIONS
 */
 function withdrawPrice() pure returns (uint256 owed) {
-
+    owed= 3;
 }
